@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\202107070\\PacMan\\vc---PacMan\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{600BAF5C-3E15-4BE2-9ACD-FF9326ED3F96}|PacMan\\PacMan.vcxproj|D:\\202107070\\PacMan\\vc---PacMan\\PacMan\\PacMan.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{600BAF5C-3E15-4BE2-9ACD-FF9326ED3F96}|PacMan\\PacMan.vcxproj|solutionrelative:PacMan\\PacMan.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "PacMan.cpp",
+              "DocumentMoniker": "D:\\202107070\\PacMan\\vc---PacMan\\PacMan\\PacMan.cpp",
+              "RelativeDocumentMoniker": "PacMan\\PacMan.cpp",
+              "ToolTip": "D:\\202107070\\PacMan\\vc---PacMan\\PacMan\\PacMan.cpp",
+              "RelativeToolTip": "PacMan\\PacMan.cpp",
+              "ViewState": "AgIAACkBAAAAAAAAAADwvzIBAAAyAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-12-05T19:33:57.416Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
