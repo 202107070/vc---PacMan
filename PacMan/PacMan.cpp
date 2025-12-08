@@ -126,10 +126,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 RECT g_background; // 배경 객체
 RECT g_me; // 내 캐릭터 객체
 RECT g_you; // 적 캐릭터 객체
-RECT g_p1, g_p2; // 포탈 객체(서로 연결)
-RECT g_food; // 음식 객체
-BOOL g_myFlag; // 내 상태 확인
-BOOL g_yourFlag; // 적 상태 확인
+//RECT g_p1, g_p2; // 포탈 객체(서로 연결)
+//RECT g_food; // 음식 객체
+//BOOL g_myFlag; // 내 상태 확인
+//BOOL g_yourFlag; // 적 상태 확인
 RECT tileRect; // 맵 타일 블록
 
 int g_speed = 10;
@@ -137,7 +137,7 @@ int g_speed = 10;
 int g_me_direction = 1; // WM_KEYDOWN에서 팩맨의 다음 이동 방향을 저장할 변수
 int g_you_direction = 1; // 유령의 현재 방향 (0:좌, 1:우, 2:상, 3:하)
 RECT g_initialMe, g_initialYou; // 나와 적 캐릭터 초기 위치
-bool g_isResetting = false; // 리셋 여부
+bool g_is_invincible = false; // 무적 상태를 저장할 변수
 
 // 타이머 ID
 #define GAME_LOOP_TIMER_ID    1
@@ -223,20 +223,20 @@ int obs[ROWS][COLS] = {// i=0 : 외곽 상단 벽
     // i==12 : 외곽 하단 벽
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1} };
 
-// 통로(obs[r][c] == 0) 중 랜덤한 위치에 캐릭터를 배치하고, 맵에 먹이를 채우는 함수
+// 통로(obs[i][j] == 0) 중 랜덤한 위치에 캐릭터를 배치하고, 맵에 먹이를 채우는 함수
 void PlaceCharactersAndFood(int level)
 {
     // 1. 맵 초기화 및 먹이 채우기
     g_food_count = 0;
-    for (int r = 0; r < ROWS; r++) {
-        for (int c = 0; c < COLS; c++) {
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++) {
             // ⚠️ obs 배열의 값을 food_map으로 복사하며 카운트 증가
-            if (obs[r][c] == 4 || obs[r][c] == 5) {
-                food_map[r][c] = obs[r][c]; // 4 또는 5 복사
+            if (obs[i][j] == 4 || obs[i][j] == 5) {
+                food_map[i][j] = obs[i][j]; // 4 또는 5 복사
                 g_food_count++;
             }
             else {
-                food_map[r][c] = 0; // 통로나 벽은 0
+                food_map[i][j] = 0; // 통로나 벽은 0
             }
         }
     }
@@ -352,7 +352,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_KEYDOWN:
     {
-        // ⚠️ 게임 상태가 STATE_PLAYING일 때만 키 입력을 처리합니다.
+        // 게임 오버 치트키 처리 (VK_F1)
+        if (wParam == VK_F1 && g_game_state == STATE_GAME_OVER)
+        {
+            // 목숨을 3으로 초기화하고 레벨 1로 바로 READY 상태 시작
+            g_life = 3;
+            g_score = 0; // 점수도 초기화 (일반적인 치트키 역할)
+            RunGameReadySequence(hWnd, 1);
+            return 0; // 즉시 반환
+        }
+
+        // F2 키를 눌러 무적 상태 토글
+        if (wParam == VK_F2)
+        {
+            g_is_invincible = !g_is_invincible; // 현재 상태를 반전 (true <-> false)
+            return 0;
+        }
+
+        // 게임 상태가 STATE_PLAYING일 때만 키 입력을 처리합니다.
         if (g_game_state != STATE_PLAYING) {
             return 0;
         }
@@ -382,8 +399,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         //    }
         //}
 
-
-        //InvalidateRect(hWnd, NULL, FALSE);
     }
     break;
 
@@ -505,10 +520,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_initialMe = g_me;
         g_initialYou = g_you;
 
-        RunGameReadySequence(hWnd, g_level); // WM_CREATE에서 레벨 1로 초기 맵 그림 시작
-
-        //SetTimer(hWnd, 1, 50, NULL);
-
         /*g_p1.left = 20;
         g_p1.top = 280;
         g_p1.right = 50;
@@ -556,12 +567,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (wParam == LEVEL_CLEAR_TIMER_ID)
         {
             KillTimer(hWnd, LEVEL_CLEAR_TIMER_ID);
-            RunGameReadySequence(hWnd, g_level + 1); // 다음 레벨로 전환
-
-            // 레벨 전환 후 게임 상태를 STATE_PLAYING으로 설정
-            g_game_state = STATE_READY;
-            SetTimer(hWnd, READY_TIMER_ID, 2000, NULL);  // READY 상태 유지 후 2초 후 게임 시작
-
+            if (g_food_count <= 0) {                  // 먹이가 모두 사라지면
+                RunGameReadySequence(hWnd, g_level + 1); // 다음 레벨로 전환
+            }
             return 0;
         }
 
@@ -597,7 +605,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         }
                     }
                 }
-                if (is_me_colliding) break;
             }
             if (is_me_colliding) {
                 g_me = g_oldMe; // 충돌 시 되돌림
@@ -607,7 +614,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // 2-3. 먹이 섭취 및 점수 업데이트 (점수 활성화 로직)
             // **********************************************
 
-            bool portal_warped = false;
+            bool portal_warped = false; // 실제 기능은 없지만 명시적 선언
 
             for (int i = 0; i < ROWS; i++) {
                 for (int j = 0; j < COLS; j++) {
@@ -667,7 +674,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                                 }
 
                                 // 먹이 제거
-                                obs[i][j] = 0;
+                                obs[i][j] = 0;        // 원본 맵에서 제거
+                                food_map[i][j] = 0;   // food_map에서도 제거
+                                g_food_count--;       // 남은 먹이 수 감소
 
                                 // 화면에서 먹이 제거
                                 RECT tileRect = { x, y, x + TILE_SIZE, y + TILE_SIZE };
@@ -678,7 +687,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         }
                     }
                 }
-                if (portal_warped) break;
+                if (portal_warped) break; // 명시적으로 포탈 워프 선언
             }
 
             // 2-4. 레벨 클리어 체크
@@ -697,22 +706,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // 1. AI 방향 결정 및 탐색 로직
             // **********************************************
 
-            int currentX_center = g_you.left + (g_you.right - g_you.left) / 2;
+            // 현재 중심 좌표
+            int currentX_center = g_you.left + (g_you.right - g_you.left) / 2; 
             int currentY_center = g_you.top + (g_you.bottom - g_you.top) / 2;
 
-            int half_tile = TILE_SIZE / 2;
+            int half_tile = TILE_SIZE / 2; // 타일 중심 값
+            // 타일 내 오프 셋(유령의 중심이 현재 타일 내에서 어디에 위치한 지 알려줌)
             int tile_x_offset = (currentX_center - groundBlock_left) % TILE_SIZE;
             int tile_y_offset = (currentY_center - groundBlock_top) % TILE_SIZE;
 
             // 타일 중앙에 근접했을 때만 (오차 3픽셀) AI를 재계산합니다.
             if (abs(tile_x_offset - half_tile) < 3 && abs(tile_y_offset - half_tile) < 3)
             {
+                //현재 타일 인덱스
                 int current_col = (currentX_center - groundBlock_left) / TILE_SIZE;
                 int current_row = (currentY_center - groundBlock_top) / TILE_SIZE;
 
+                // 팩맨 과의 거리
                 int dX = g_me.left - g_you.left;
                 int dY = g_me.top - g_you.top;
 
+                // 직선 목표 방향
                 int target_dir;
                 if (abs(dX) >= abs(dY)) {
                     target_dir = (dX > 0) ? 1 : 0; // X축 우선
@@ -721,15 +735,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     target_dir = (dY > 0) ? 3 : 2; // Y축 우선
                 }
 
-                int primary_dir = target_dir;
+                int primary_dir = target_dir; // 1순위 목표
+                // 수직 우회 방향(막혔을 때 코너를 돌 수 있도록)
                 int secondary_dir_1 = (primary_dir == 0 || primary_dir == 1) ? 2 : 0; // 수직 1
                 int secondary_dir_2 = (primary_dir == 0 || primary_dir == 1) ? 3 : 1; // 수직 2
 
                 // 탐색 순서: {현재 방향, 목표 방향, 수직 1, 수직 2}
                 int try_dirs[4] = { g_you_direction, primary_dir, secondary_dir_1, secondary_dir_2 };
 
-                int best_dir = -1;
-                float min_dist_sq = 1e9;
+                // 최적 경로 추적
+                int best_dir = -1; // 가장 최적의 방향 저장
+                float min_dist_sq = 1e9; // 가장 짧은 거리 저장
                 int targetX = g_me.left + (g_me.right - g_me.left) / 2;
                 int targetY = g_me.top + (g_me.bottom - g_me.top) / 2;
 
@@ -741,6 +757,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     // 180도 회전 및 중복 시도 방지 (현재 방향과 목표가 같을 때는 제외)
                     if (dir == opposite_dir && dir != g_you_direction) continue;
 
+                    // 다음 타일 예측
                     int next_row = current_row;
                     int next_col = current_col;
 
@@ -755,6 +772,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         int next_Y = groundBlock_top + next_row * TILE_SIZE + half_tile;
                         float dist_sq = (float)(next_X - targetX) * (next_X - targetX) + (float)(next_Y - targetY) * (next_Y - targetY);
 
+                        // 최적 방향 선택 및 갱신
                         if (dist_sq < min_dist_sq)
                         {
                             min_dist_sq = dist_sq;
@@ -798,16 +816,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (is_colliding_wall)
             {
                 g_you = g_oldYou; // 충돌 시, 이전 위치로 되돌림
-
-                // **************************************************
-                // ** 🎯 핵심 수정: 충돌 시 AI 탐색 강제 실행 블록 **
-                // **************************************************
-
-                // 현재 갇힌 타일 인덱스 획득 (g_oldYou 기준)
-                int currentX_center = g_oldYou.left + (g_oldYou.right - g_oldYou.left) / 2;
-                int currentY_center = g_oldYou.top + (g_oldYou.bottom - g_oldYou.top) / 2;
-                int current_col = (currentX_center - groundBlock_left) / TILE_SIZE;
-                int current_row = (currentY_center - groundBlock_top) / TILE_SIZE;
             }
 
             // **********************************************
@@ -816,6 +824,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             RECT ret;
             if (IntersectRect(&ret, &g_me, &g_you))
             {
+                // 무적 상태 확인
+                if (g_is_invincible)
+                {
+                    // 무적 상태이므로 아무것도 하지 않고 함수 종료 (충돌 무시)
+                    InvalidateRect(hWnd, NULL, FALSE);
+                    return 0;
+                }
+
                 g_life--; // 목숨 감소
                 KillTimer(hWnd, GAME_LOOP_TIMER_ID);
 
