@@ -665,24 +665,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                             // 2. 먹이 처리 (4, 5)
                             else if (obs[i][j] == 4 || obs[i][j] == 5)
                             {
-                                // 점수 증가
-                                if (obs[i][j] == 4) {
-                                    g_score += 10;  // 일반 먹이
-                                }
-                                else if (obs[i][j] == 5) {
-                                    g_score += 100; // 슈퍼 먹이
-                                }
+                                if (food_map[i][j] != 0)
+                                {
+                                    // 점수 증가
+                                    if (obs[i][j] == 4) {
+                                        g_score += 10;  // 일반 먹이
+                                    }
+                                    else if (obs[i][j] == 5) {
+                                        g_score += 100; // 슈퍼 먹이
+                                    }
 
-                                // 먹이 제거
-                                obs[i][j] = 0;        // 원본 맵에서 제거
-                                food_map[i][j] = 0;   // food_map에서도 제거
-                                g_food_count--;       // 남은 먹이 수 감소
+                                    // 먹이 제거
+                                    food_map[i][j] = 0;   // food_map에서도 제거
+                                    g_food_count--;       // 남은 먹이 수 감소
 
-                                // 화면에서 먹이 제거
-                                RECT tileRect = { x, y, x + TILE_SIZE, y + TILE_SIZE };
-                                HBRUSH hClearBrush = CreateSolidBrush(RGB(0, 0, 0));
-                                FillRect(g_hMemDC, &tileRect, hClearBrush);
-                                DeleteObject(hClearBrush);
+                                    // 화면에서 먹이 제거
+                                    RECT tileRect = { x, y, x + TILE_SIZE, y + TILE_SIZE };
+                                    HBRUSH hClearBrush = CreateSolidBrush(RGB(0, 0, 0));
+                                    FillRect(g_hMemDC, &tileRect, hClearBrush);
+                                    DeleteObject(hClearBrush);
+                                }
                             }
                         }
                     }
